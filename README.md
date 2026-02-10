@@ -1,4 +1,23 @@
-# Brazilian E-Commerce ETL
+
+<p align="center">
+	<img src="docs/simplon_logo.png" alt="Simplon Logo" width="180"/>
+</p>
+
+---
+
+**Auteur : Kaouter Rhazlani**  
+Formation : Simplon Data Engineer P1 (2025-2027)
+
+---
+
+## Configuration
+Les paramètres de connexion à la base de données sont définis dans `config/settings.py` et peuvent être surchargés via des variables d'environnement (voir `.env`).
+
+- Un fichier `.env.example` est fourni pour créer .env, ce dernier facilite la configuration des variables d'environnement nécessaires.
+
+- Le paramètre `CHUNK_SIZE` permet de contrôler la taille des lots lors de l'insertion en base (par défaut : 10 000 lignes). Modifiez-le dans `config/settings.py` selon vos besoins.
+
+- Toute la journalisation est désormais assurée par la librairie [loguru](https://github.com/Delgan/loguru), qui offre une gestion moderne et centralisée des logs.
 
 Pipeline ETL pour transformer les données Olist (e-commerce brésilien) en entrepôt de données analytique.
 

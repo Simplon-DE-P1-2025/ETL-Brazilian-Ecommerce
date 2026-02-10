@@ -1,12 +1,9 @@
-import logging
+from loguru import logger
 from src.bronze.csv_extractor import BronzeExtractor
 from src.silver.processor import SilverProcessor
 from src.gold.aggregator import GoldAggregator
 from src.loaders.postgres_loader import PostgresLoader
 from config.settings import SQL_DIR
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
 
 
 def main():

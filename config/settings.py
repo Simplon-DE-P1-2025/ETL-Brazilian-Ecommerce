@@ -7,10 +7,10 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 RAW_DATA_DIR = DATA_DIR / "raw"
-LOGS_DIR = DATA_DIR / "logs"
+
 SQL_DIR = BASE_DIR / "sql"
 
-for directory in [RAW_DATA_DIR, LOGS_DIR]:
+for directory in [RAW_DATA_DIR]:
     directory.mkdir(parents=True, exist_ok=True)
 
 DB_CONFIG = {
@@ -20,6 +20,9 @@ DB_CONFIG = {
     "user": os.getenv("DB_USER", "postgres"),
     "password": os.getenv("DB_PASSWORD", ""),
 }
+
+# Taille des lots pour l'insertion en base
+CHUNK_SIZE = 10000
 
 CSV_FILES = {
     "customers": "olist_customers_dataset.csv",

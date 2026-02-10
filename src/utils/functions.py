@@ -56,33 +56,3 @@ def calculate_volume_cm3(df: pd.DataFrame) -> pd.Series:
     Description: Calcule le volume du produit (longueur x hauteur x largeur)
     """
     return df['product_length_cm'] * df['product_height_cm'] * df['product_width_cm']
-
-
-def fill_missing_with_mode(series: pd.Series) -> pd.Series:
-    """
-    Nom        : fill_missing_with_mode
-    Input      : series (Series) - colonne avec valeurs manquantes
-    Output     : Series - valeurs manquantes remplacées par le mode
-    Description: Remplit les NaN par le mode (valeur la plus fréquente),
-                 ou la médiane si pas de mode
-    """
-    if series.isnull().sum() > 0:
-        mode_value = series.mode()[0] if len(series.mode()) > 0 else series.median()
-        return series.fillna(mode_value)
-    return series
-
-
-def haversine_distance(lat1, lon1, lat2, lon2):
-    """
-    Nom        : haversine_distance
-    Input      : lat1, lon1, lat2, lon2 (float) - coordonnées GPS
-    Output     : float - distance en kilomètres
-    Description: Calcule la distance à vol d'oiseau entre deux points GPS
-                 en utilisant la formule de Haversine
-    """
-    lat1, lon1, lat2, lon2 = map(np.radians, [lat1, lon1, lat2, lon2])
-    dlat = lat2 - lat1
-    dlon = lon2 - lon1
-    a = np.sin(dlat/2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon/2)**2
-    c = 2 * np.arcsin(np.sqrt(a))
-    return 6371 * c

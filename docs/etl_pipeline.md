@@ -1,3 +1,14 @@
+## Configuration
+- Les paramètres de connexion à la base de données sont définis dans le fichier `config/settings.py` et peuvent être surchargés via des variables d'environnement à partir du .env (voir `.env.example` exemplaire de .env).
+	>  Utilisez le fichier `.env.example` comme modèle pour créer votre propre `.env`.
+	>  le fichier `.env` est fourni pour faciliter la configuration des variables d'environnement nécessaires..
+
+- Le paramètre `CHUNK_SIZE` permet de contrôler la taille des lots lors de l'insertion en base (par défaut : 10 000 lignes). Modifiez-le dans `config/settings.py` selon vos besoins pour optimiser les performances lors du chargement massif de données.
+	> Adaptez `CHUNK_SIZE` selon la capacité de votre machine et la taille des jeux de données.
+
+- Toute la journalisation est désormais assurée par la librairie [loguru](https://github.com/Delgan/loguru), qui offre une gestion moderne et centralisée des logs.
+
+
 [← Retour au README](../README.md)
 
 # Pipeline ETL

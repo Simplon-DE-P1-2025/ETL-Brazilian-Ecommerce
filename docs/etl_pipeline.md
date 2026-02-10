@@ -1,3 +1,15 @@
+
+<p align="center">
+	<img src="simplon_logo.png" alt="Simplon Logo" width="180"/>
+</p>
+
+---
+
+**Auteur : Kaouter Rhazlani**  
+Formation : Simplon Data Engineer P1 (2025-2027)
+
+---
+
 ## Configuration
 - Les paramètres de connexion à la base de données sont définis dans le fichier `config/settings.py` et peuvent être surchargés via des variables d'environnement à partir du .env (voir `.env.example` exemplaire de .env).
 	>  Utilisez le fichier `.env.example` comme modèle pour créer votre propre `.env`.

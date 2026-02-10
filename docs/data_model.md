@@ -1,5 +1,14 @@
 [← Retour au README](../README.md)
+<p align="center">
+	<img src="simplon_logo.png" alt="Simplon Logo" width="180"/>
+</p>
 
+---
+
+**Auteur : Kaouter Rhazlani**  
+Formation : Simplon Data Engineer P1 (2025-2027)
+
+---
 # Modèle de Données
 
 Star Schema avec 6 dimensions et 6 tables de faits.

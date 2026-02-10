@@ -1,5 +1,14 @@
 [← Retour au README](../README.md)
+<p align="center">
+	<img src="simplon_logo.png" alt="Simplon Logo" width="180"/>
+</p>
 
+---
+
+**Auteur : Kaouter Rhazlani**  
+Formation : Simplon Data Engineer P1 (2025-2027)
+
+---
 # Règles de Nettoyage
 
 ## Filtrage Temporel

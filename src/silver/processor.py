@@ -1,5 +1,6 @@
 from typing import Dict
 import pandas as pd
+from loguru import logger
 from src.silver.cleaners.customers_transformer import clean_customers
 from src.silver.cleaners.orders_transformer import clean_orders
 from src.silver.cleaners.products_transformer import clean_products
@@ -60,7 +61,7 @@ class SilverProcessor:
             ]
             after = len(data['customers'])
             if before > after:
-                print(f"  → Customers: {before - after} orphelins supprimés")
+                logger.info(f"  → Customers: {before - after} orphelins supprimés")
         
         # Payments: garder seulement ceux liés à une commande existante
         if 'payments' in data:
@@ -70,7 +71,7 @@ class SilverProcessor:
             ]
             after = len(data['payments'])
             if before > after:
-                print(f"  → Payments: {before - after} orphelins supprimés")
+                logger.info(f"  → Payments: {before - after} orphelins supprimés")
         
         # Reviews: garder seulement ceux liés à une commande existante
         if 'reviews' in data:
@@ -80,7 +81,7 @@ class SilverProcessor:
             ]
             after = len(data['reviews'])
             if before > after:
-                print(f"  → Reviews: {before - after} orphelins supprimés")
+                logger.info(f"  → Reviews: {before - after} orphelins supprimés")
         
         # Order_items: garder seulement ceux liés à une commande existante
         if 'order_items' in data:
@@ -90,7 +91,7 @@ class SilverProcessor:
             ]
             after = len(data['order_items'])
             if before > after:
-                print(f"  → Order_items: {before - after} orphelins supprimés")
+                logger.info(f"  → Order_items: {before - after} orphelins supprimés")
         
         # Products et Sellers: garder tous (pour identifier ceux jamais vendus)
         

@@ -1,7 +1,7 @@
 import pandas as pd
 from typing import Dict
 from sqlalchemy import create_engine, text
-from config.settings import DB_CONFIG
+from config.settings import DB_CONFIG, CHUNK_SIZE
 
 
 class PostgresLoader:
@@ -30,7 +30,7 @@ class PostgresLoader:
                 if_exists=if_exists,
                 index=False,
                 method='multi',
-                chunksize=10000
+                chunksize=CHUNK_SIZE
             )
 
     def execute_sql_file(self, filepath: str):

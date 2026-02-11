@@ -42,3 +42,19 @@ class PostgresLoader:
                 if statement.strip():
                     conn.execute(text(statement))
             conn.commit()
+            
+    def execute_query(self,str_query:str, params_query = None):
+        # exécuter une requete select lecture simple // update , insert et delete engine.begin() pour faire le commit ou rollback si erreur
+        if str_query.strip().lower().startswith('select'):
+            with self.engine.connect() as conn:
+                df = pd.read_sql(
+                    text(str_query),
+                    con= conn,
+                    params = params_query or {})
+            return df
+        else:
+            with self.engine.begin() as conn:
+                conn.execute(
+                    text(str_query),
+                    parameters= params_query or {})
+            return None

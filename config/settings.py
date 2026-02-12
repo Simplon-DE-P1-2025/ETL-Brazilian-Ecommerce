@@ -72,3 +72,51 @@ STATE_NAMES = {
     'RO': 'Rondonia', 'RR': 'Roraima', 'RS': 'Rio Grande do Sul', 'SC': 'Santa Catarina',
     'SE': 'Sergipe', 'SP': 'Sao Paulo', 'TO': 'Tocantins'
 }
+
+# Mapping des catégories vers groupes généraux
+CATEGORY_MAPPING = {
+    'furniture': [
+        'office_furniture', 'furniture_decor', 'bed_bath_table', 
+        'furniture_living_room', 'furniture_bedroom', 'furniture_mattress_and_upholstery',
+        'kitchen_dining_laundry_garden_furniture', 'la_cuisine'
+    ],
+    'electronics': [
+        'computers_accessories', 'telephony', 'electronics', 'pc_gamer',
+        'audio', 'tablets_printing_image', 'computers', 'small_appliances',
+        'small_appliances_home_oven_and_coffee', 'air_conditioning',
+        'home_appliances', 'home_appliances_2', 'portable_kitchen_food_processors',
+        'signaling_and_security', 'security_and_services', 'fixed_telephony'
+    ],
+    'fashion': [
+        'fashion_female_clothing', 'fashion_male_clothing', 'fashion_shoes',
+        'fashion_bags_accessories', 'fashion_underwear_beach', 'fashion_sport',
+        'fashion_childrens_clothes', 'fashio_female_clothing', 'luggage_accessories',
+        'watches_gifts', 'cool_stuff'
+    ],
+    'home_garden': [
+        'housewares', 'garden_tools', 'pet_shop', 'flowers', 'home_confort',
+        'home_comfort_2', 'home_construction', 'construction_tools_construction',
+        'construction_tools_lights', 'construction_tools_garden', 
+        'construction_tools_safety', 'costruction_tools_tools', 'costruction_tools_garden'
+    ],
+    'entertainment': [
+        'sports_leisure', 'toys', 'music', 'cds_dvds_musicals', 'dvds_blu_ray',
+        'musical_instruments', 'consoles_games', 'party_supplies', 'christmas_supplies',
+        'arts_and_craftmanship', 'art'
+    ],
+    'beauty_health': [
+        'health_beauty', 'perfumery', 'diapers_and_hygiene', 'baby', 
+        'market_place'
+    ],
+    'food_drinks': [
+        'food_drink', 'drinks', 'food', 'agro_industry_and_commerce'
+    ],
+    'books_stationery': [
+        'books_general_interest', 'stationery', 'books_technical', 
+        'books_imported', 'cine_photo'
+    ],
+    'auto': [
+        'auto', 'industry_commerce_and_business'
+    ],
+    'other': []  # Catégorie par défaut
+}

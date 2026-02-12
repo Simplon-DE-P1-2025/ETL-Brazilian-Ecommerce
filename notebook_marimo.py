@@ -247,9 +247,9 @@ def _(engine, mo):
 def _(engine, mo):
     _df = mo.sql(
         f"""
-          SELECT order_id, SUM(payment_value) as total_payment_value
-            FROM silver.payments
-            GROUP BY order_id
+        SELECT order_id, SUM(payment_value) as total_payment_value
+          FROM silver.payments
+          GROUP BY order_id
         """,
         engine=engine
     )
@@ -359,7 +359,7 @@ def _(mo):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    <div style='color:blue; font-size: 18px'> 1-Récupérer le classement de chaque client en fonction du montant total de ses paiements (à l'aide de l'expression régulière CTE sur olist_order_payments_dataset, puis en appelant la fonction RANK()).
+    <div style='color:blue; font-size: 18px'> 1-Récupérer le classement de chaque client en fonction du montant total de ses paiements (à l'aide de l'expression régulière CTE sur order_payments, puis en appelant la fonction RANK()).
     </div>
     """)
     return
@@ -416,7 +416,7 @@ def _(engine, mo):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    <div style='color:blue; font-size: 18px'>2-Pour chaque commande, afficher le montant du paiement et le montant moyen des commandes du client (à l'aide des fonctions AVG() OVER() sur silver.orders et olist_order_payments_dataset).</div>
+    <div style='color:blue; font-size: 18px'>2-Pour chaque commande, afficher le montant du paiement et le montant moyen des commandes du client (à l'aide des fonctions AVG() OVER() sur silver.orders et order_payments).</div>
     """)
     return
 
@@ -471,7 +471,8 @@ def _(mo):
 
 @app.cell
 def _(engine, mo):
-    df_exo3 = mo.sql("""
+    df_exo3 = mo.sql(
+        f"""
         WITH cte1 AS (
             SELECT
                 order_id,
@@ -497,8 +498,9 @@ def _(engine, mo):
             diff_days
         FROM cte2
         ORDER BY diff_days DESC NULLS LAST
-    
-    """,engine=engine)
+        """,
+        engine=engine
+    )
     return
 
 
@@ -573,11 +575,11 @@ def _(engine, mo):
         DROP INDEX IF EXISTS silver.idx_orders_purchase_ts;
         CREATE INDEX idx_orders_purchase_ts
         ON silver.orders(order_purchase_timestamp);
-
+    
         DROP INDEX IF EXISTS silver.idx_orders_customer_purchase;
         CREATE INDEX idx_orders_customer_purchase
         ON silver.orders(customer_id, order_purchase_timestamp DESC);
-
+    
         DROP INDEX IF EXISTS silver.idx_orders_customer;
         CREATE INDEX idx_orders_customer
         ON silver.orders(customer_id);
@@ -585,12 +587,12 @@ def _(engine, mo):
         DROP INDEX IF EXISTS silver.idx_order_items_product;
         CREATE INDEX idx_order_items_product
         ON silver.order_items(product_id);
-
+    
         DROP INDEX IF EXISTS silver.idx_products_category;
         CREATE INDEX idx_products_category
         ON silver.products(product_category_name);
-    """,engine= engine)
-
+        """, engine = engine)
+    _df
     return
 
 
@@ -601,7 +603,8 @@ def _(engine, mo):
         SELECT *
         FROM silver.orders
         WHERE customer_id = '9ef432eb6251297304e76186b10a928d';
-    """, engine = engine)
+        """, engine = engine)
+    _df
     return
 
 
@@ -661,10 +664,10 @@ def _(engine, mo):
 def _(engine, mo):
     #1-ANALYSE APRS INDEX
     _df = mo.sql("""
-        SET enable_seqscan = ON;
-        DROP INDEX IF EXISTS silver.idx_order_purchase_year;
-        CREATE INDEX idx_order_purchase_year
-        ON silver.orders(purchase_year);
+    
+        DROP INDEX IF EXISTS silver.idx_order_order;
+        CREATE INDEX idx_order_order
+        ON silver.orders(order_id);
     
         DROP INDEX IF EXISTS silver.idx_orders_purchase_ts;
         CREATE INDEX idx_orders_purchase_ts
@@ -674,7 +677,7 @@ def _(engine, mo):
         CREATE INDEX idx_order_items_order
         ON silver.order_items(order_id);
 
-        --SET enable_seqscan = OFF;
+        --SET enable_seqscan = OFF; --forcer l'utilisation d'index pour voir la diff
         EXPLAIN ANALYZE
         SELECT
             o.order_id,
@@ -683,7 +686,9 @@ def _(engine, mo):
         JOIN silver.order_items oi ON oi.order_id = o.order_id
         WHERE o.order_purchase_timestamp >= '2018-01-01'
         GROUP BY o.order_id;
-        --SET enable_seqscan = ON;
+        --SET enable_seqscan = ON; 
+        --activer l'utilisation de sequantial scan (car postgreSQL choisi la méthode la plus optimale)
+        -- n'utilisé pas le param  enable_seqscan en prod  
         """,
         engine=engine)
     _df
@@ -702,6 +707,8 @@ def _(mo):
 def _(engine, mo):
     #1-ANALYSE AVANT INDEX
     _df = mo.sql("""
+        DROP INDEX IF EXISTS silver.idx_order_purchase_year;
+    
         EXPLAIN ANALYZE
         SELECT *
         FROM silver.orders
@@ -732,8 +739,152 @@ def _(engine, mo):
     return
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### Problème 2 : jointure coûteuse (Nested loop join)
+    """)
+    return
+
+
 @app.cell
-def _():
+def _(engine, mo):
+    #1-ANALYSE AVANT INDEX
+    _df = mo.sql("""
+
+        DROP INDEX IF EXISTS silver.idx_order_order;
+        DROP INDEX IF EXISTS silver.idx_order_items_order;
+        DROP INDEX IF EXISTS silver.idx_order_items_product;
+
+        EXPLAIN ANALYZE
+        SELECT o.order_id, oi.product_id
+        FROM silver.orders o
+        JOIN silver.order_items oi ON oi.order_id = o.order_id;
+        """,
+        engine=engine)
+    _df
+    return
+
+
+@app.cell
+def _(engine, mo):
+    #1-ANALYSE APRES INDEX
+    _df = mo.sql("""
+
+        DROP INDEX IF EXISTS silver.idx_order_order;
+        CREATE INDEX idx_order_order
+        ON silver.orders(order_id);
+
+        DROP INDEX IF EXISTS silver.idx_order_items_order;
+        CREATE INDEX idx_order_items_order
+        ON silver.orders(order_id);
+    
+        DROP INDEX IF EXISTS silver.idx_order_items_product;
+        CREATE INDEX idx_order_items_product
+        ON silver.order_items(product_id);
+    
+        EXPLAIN ANALYZE
+        SELECT o.order_id, oi.product_id
+        FROM silver.orders o
+        JOIN silver.order_items oi ON oi.order_id = o.order_id;
+        """,
+        engine=engine)
+    _df
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### Problème 3 : Problème 3 : tri coûteux (Sort sans index)
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    #1-ANALYSE AVANT INDEX
+    _df = mo.sql("""
+
+        DROP INDEX IF EXISTS silver.idx_order_order;
+        DROP INDEX IF EXISTS silver.idx_orders_purchase_ts;
+
+        EXPLAIN ANALYZE
+        SELECT order_id, order_purchase_timestamp
+        FROM silver.orders
+        ORDER BY order_purchase_timestamp DESC;
+        """,
+        engine=engine)
+    _df
+    return
+
+
+@app.cell
+def _(engine, mo):
+    #1-ANALYSE APRES INDEX
+    _df = mo.sql("""
+
+        DROP INDEX IF EXISTS silver.idx_order_order;
+        CREATE INDEX idx_order_order
+        ON silver.orders(order_id);
+
+        DROP INDEX IF EXISTS silver.idx_orders_purchase_ts;
+        CREATE INDEX idx_orders_purchase_ts
+        ON silver.orders(order_purchase_timestamp);
+    
+        EXPLAIN ANALYZE
+        SELECT order_id, order_purchase_timestamp
+        FROM silver.orders
+        ORDER BY order_purchase_timestamp DESC;
+        """,
+        engine=engine)
+    _df
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    <div style='color:blue; font-size: 18px'> Exercice</div>
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    #1--- Requête 1
+    df_execution_req1 = mo.sql("""
+
+        EXPLAIN ANALYZE
+        SELECT *
+        FROM silver.orders
+        WHERE order_status = 'delivered';
+        """,
+        engine=engine)
+    df_execution_req1
+    return
+
+
+@app.cell
+def _(engine, mo):
+    #1--- Requête 2
+    df_execution_req2 = mo.sql("""
+
+        EXPLAIN ANALYZE
+        SELECT order_id, customer_id
+        FROM silver.orders
+        WHERE order_status = 'delivered';
+        """,
+        engine=engine)
+    df_execution_req2
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### Conclusion :La requête 2 est plus rapide que La requête 1
+    """)
     return
 
 
@@ -748,8 +899,156 @@ def _(mo):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
+    <div style='color:blue; font-size: 18px'> Exercice</div>
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    # -- Requête avant optimisation
+    _df = mo.sql(
+        """
+        SELECT *
+        FROM silver.orders
+        WHERE UPPER(order_status) = 'DELIVERED'
+        ORDER BY order_purchase_timestamp DESC;
+        """,
+        engine=engine,
+    )
+    _df
+    return
+
+
+@app.cell
+def _(engine, mo):
+    # -- Requête avant optimisation
+    _df = mo.sql(
+        """
+        EXPLAIN ANALYZE
+        SELECT *
+        FROM silver.orders
+        WHERE UPPER(order_status) = 'DELIVERED'
+        ORDER BY order_purchase_timestamp DESC;
+        """,
+        engine=engine,
+    )
+    _df
+    return
+
+
+@app.cell
+def _(engine, mo):
+    # -- Requête après optimisation
+    _df = mo.sql(
+        """
+        SELECT
+                order_id,
+                customer_id,
+                order_status,
+                order_purchase_timestamp
+        FROM silver.orders
+        WHERE order_status = 'delivered'
+        ORDER BY order_purchase_timestamp DESC
+        LIMIT 10;
+        """,
+        engine=engine,
+    )
+    _df
+    return
+
+
+@app.cell
+def _(engine, mo):
+    # -- Requête après optimisation
+    _df = mo.sql(
+        """
+        EXPLAIN ANALYZE
+        SELECT
+                order_id,
+                customer_id,
+                order_status,
+                order_purchase_timestamp
+        FROM silver.orders
+        WHERE order_status = 'delivered'
+        ORDER BY order_purchase_timestamp DESC
+        LIMIT 10;
+        """,
+        engine=engine,
+    )
+    _df
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
     <div style='color:green; font-size: 25px'>Performance avancée et monitoring</div>
     """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    <div style='color:blue; font-size: 18px'> Exercice final</div>
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    # -- Requête avant optimisation
+    _df = mo.sql(
+        """
+        DROP INDEX IF EXISTS silver.idx_products_category;
+        DROP INDEX IF EXISTS silver.idx_order_items_product_price;
+
+
+        EXPLAIN ANALYZE
+        SELECT *
+        FROM silver.order_items oi
+        WHERE oi.product_id IN (
+            SELECT p.product_id
+            FROM silver.products p
+            WHERE UPPER(p.product_category_name) = 'CAMA_MESA_BANHO'
+        )
+        ORDER BY oi.price DESC;
+        """,
+        engine=engine,
+    )
+    _df
+    return
+
+
+@app.cell
+def _(engine, mo):
+    # -- Requête après optimisation
+    _df = mo.sql(
+        """
+    
+        DROP INDEX IF EXISTS silver.idx_products_category;
+        CREATE INDEX idx_products_category
+        ON silver.products(product_category_name);
+
+        CREATE INDEX idx_order_items_product_price
+        ON silver.order_items(product_id, price DESC);
+    
+        EXPLAIN ANALYZE
+        WITH target_products AS (
+            SELECT product_id
+            FROM silver.products
+            WHERE product_category_name = 'cama_mesa_banho'
+        )
+        SELECT oi.order_id, oi.product_id, oi.price, oi.freight_value
+        FROM silver.order_items oi
+        JOIN target_products tp ON tp.product_id = oi.product_id
+        ORDER BY oi.price DESC
+        LIMIT 100;
+        """,
+        engine=engine,
+    )
+    _df
     return
 
 
@@ -764,24 +1063,13 @@ def _(mo):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    <div style='color:green; font-size: 25px'>Vues</div>
-    """)
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    <div style='color:green; font-size: 25px'>Transactions acid</div>
-    """)
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
     <div style='color:red; font-size: 35px'> Projets </div>
     """)
+    return
+
+
+@app.cell
+def _():
     return
 
 

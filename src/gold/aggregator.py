@@ -1,59 +1,10 @@
 import pandas as pd
 import numpy as np
-from typing import Dict, Optional
-from datetime import datetime
+from typing import Dict
 import logging
+from config.settings import CATEGORY_MAPPING
 
 logger = logging.getLogger(__name__)
-
-
-# Mapping des catégories vers groupes généraux
-CATEGORY_MAPPING = {
-    'furniture': [
-        'office_furniture', 'furniture_decor', 'bed_bath_table', 
-        'furniture_living_room', 'furniture_bedroom', 'furniture_mattress_and_upholstery',
-        'kitchen_dining_laundry_garden_furniture', 'la_cuisine'
-    ],
-    'electronics': [
-        'computers_accessories', 'telephony', 'electronics', 'pc_gamer',
-        'audio', 'tablets_printing_image', 'computers', 'small_appliances',
-        'small_appliances_home_oven_and_coffee', 'air_conditioning',
-        'home_appliances', 'home_appliances_2', 'portable_kitchen_food_processors',
-        'signaling_and_security', 'security_and_services', 'fixed_telephony'
-    ],
-    'fashion': [
-        'fashion_female_clothing', 'fashion_male_clothing', 'fashion_shoes',
-        'fashion_bags_accessories', 'fashion_underwear_beach', 'fashion_sport',
-        'fashion_childrens_clothes', 'fashio_female_clothing', 'luggage_accessories',
-        'watches_gifts', 'cool_stuff'
-    ],
-    'home_garden': [
-        'housewares', 'garden_tools', 'pet_shop', 'flowers', 'home_confort',
-        'home_comfort_2', 'home_construction', 'construction_tools_construction',
-        'construction_tools_lights', 'construction_tools_garden', 
-        'construction_tools_safety', 'costruction_tools_tools', 'costruction_tools_garden'
-    ],
-    'entertainment': [
-        'sports_leisure', 'toys', 'music', 'cds_dvds_musicals', 'dvds_blu_ray',
-        'musical_instruments', 'consoles_games', 'party_supplies', 'christmas_supplies',
-        'arts_and_craftmanship', 'art'
-    ],
-    'beauty_health': [
-        'health_beauty', 'perfumery', 'diapers_and_hygiene', 'baby', 
-        'market_place'
-    ],
-    'food_drinks': [
-        'food_drink', 'drinks', 'food', 'agro_industry_and_commerce'
-    ],
-    'books_stationery': [
-        'books_general_interest', 'stationery', 'books_technical', 
-        'books_imported', 'cine_photo'
-    ],
-    'auto': [
-        'auto', 'industry_commerce_and_business'
-    ],
-    'other': []  # Catégorie par défaut
-}
 
 
 def _get_general_category(category_name: str) -> str:
@@ -101,6 +52,7 @@ class GoldAggregator:
         # === FAITS (Tables de métriques - mesures quantitatives) ===
         self._create_fact_order_items()
         self._create_fact_orders()
+        self._create_fact_payments()
         self._create_fact_daily_sales()
         self._create_fact_customer_lifetime()
         self._create_fact_product_performance()
@@ -317,6 +269,9 @@ class GoldAggregator:
         
         self.gold['dim_geography'] = dim_geography
         logger.info(f"dim_geography créée: {len(dim_geography)} lignes")
+    
+    
+
 
     # =========================================================================
     # FAITS
@@ -414,6 +369,62 @@ class GoldAggregator:
         
         self.gold['fact_orders'] = fact_orders
         logger.info(f"fact_orders créée: {len(fact_orders)} lignes")
+    
+    
+    
+    def _create_fact_payments(self):
+        """
+        Table de faits des paiements (1 ligne = 1 paiement).
+        """
+        if 'payments' not in self.silver:
+            logger.warning("Table 'payments' manquante - fact_payments non créée")
+            return
+        
+        
+        payments = self.silver['payments'].copy()
+        
+        # Ajout descriptions business
+        payment_type_desc = {
+            'credit_card': "Carte de crédit",
+            'voucher': "Coupon ou chèque-cadeau",
+            'boleto': "Boleto (facture à payer en banque)",
+            'debit_card': "Carte de débit",
+            'not_defined': "Inconnu"
+        }
+
+        payments['payment_type_desc'] = payments['payment_type'].map(payment_type_desc).fillna("Autre")
+        
+        # Regroupement pour voir toutes les options de versements par type
+        # => "installments_mode" : 'single', 'multiple', 'variable'
+        def installments_mode(inst):
+            if inst == 1:
+                return 'single'
+            elif inst > 1:
+                return 'multiple'
+            else:
+                return 'variable'
+        payments['installments_mode'] = payments['payment_installments'].apply(installments_mode)
+
+        
+        cols_mapping = {
+            'order_id': 'order_id',
+            'payment_type': 'payment_type',
+            'payment_type_desc': 'payment_type_desc',
+            'has_installments': 'has_installments',
+            'payment_installments': 'payment_installments',
+            'installments_mode': 'installments_mode',
+            'payment_sequential': 'payment_sequential',
+            'payment_value': 'payment_value'
+        }
+        
+        existing_cols = [c for c in cols_mapping.keys() if c in payments.columns]
+        payments = payments[existing_cols].copy()
+        fact_payments = payments.rename(columns={k: v for k, v in cols_mapping.items() if k in existing_cols})
+        
+
+        self.gold['fact_payments'] = fact_payments
+        logger.info(f"fact_payments créée: {len(fact_payments)} lignes")
+        
 
     def _create_fact_daily_sales(self):
         """

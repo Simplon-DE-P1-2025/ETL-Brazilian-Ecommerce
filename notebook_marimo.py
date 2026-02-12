@@ -43,25 +43,24 @@ def _(mo):
 
 @app.cell
 def _(engine, mo):
-    _df = mo.sql(
-        f"""
-        WITH customer_orders AS (
-            SELECT 
-            	o.customer_id,
-            	COUNT(*) AS nb_orders
-            FROM gold.fact_orders o
-            GROUP BY o.customer_id
-        )
+    df1 = mo.sql("""
+    WITH customer_orders AS (
         SELECT 
-            c.customer_unique_id,
-            c.city,
-            co.nb_orders
-        FROM gold.dim_customers c 
-        JOIN customer_orders co ON c.customer_id = co.customer_id
-        ORDER BY co.nb_orders DESC
-        """,
-        engine=engine
+        	o.customer_id,
+        	COUNT(*) AS nb_orders
+        FROM gold.fact_orders o
+        GROUP BY o.customer_id
     )
+    SELECT 
+        c.customer_unique_id,
+        c.city,
+        co.nb_orders
+    FROM gold.dim_customers c 
+    JOIN customer_orders co ON c.customer_id = co.customer_id
+    ORDER BY co.nb_orders DESC
+    """,engine = engine)
+    df1
+
     return
 
 
@@ -91,27 +90,28 @@ def _(mo):
 
 @app.cell
 def _(engine, mo):
-    _df = mo.sql(
-        f"""
-        WITH product_revenue AS (
-            SELECT 
-                oi.product_id,
-                p.category_name,
-                SUM(oi.total_price) AS revenue
-            FROM
-            gold.fact_order_items oi
-            JOIN gold.dim_products p ON oi.product_id = p.product_id
-            GROUP BY oi.product_id, p.category_name
-        )
+    df2 = mo.sql("""
+    WITH product_revenue AS (
         SELECT 
-            product_id,
-            category_name,
-            revenue,
-            RANK() OVER(PARTITION BY category_name ORDER BY revenue DESC) AS classement
-        FROM product_revenue
-        """,
-        engine=engine
+            oi.product_id,
+            p.category_name,
+            SUM(oi.total_price) AS revenue
+        FROM
+        gold.fact_order_items oi
+        JOIN gold.dim_products p ON oi.product_id = p.product_id
+        GROUP BY oi.product_id, p.category_name
     )
+    SELECT 
+        product_id,
+        category_name,
+        revenue,
+        RANK() OVER(PARTITION BY category_name ORDER BY revenue DESC) AS classement
+    FROM product_revenue
+    """,engine = engine)
+    df2
+
+    
+
     return
 
 
@@ -133,27 +133,29 @@ def _(mo):
 
 @app.cell
 def _(engine, mo):
-    _df = mo.sql(
-        f"""
-        WITH product_revenue AS (
-            SELECT 
-                oi.product_id,
-                p.category_name,
-                SUM(oi.total_price) AS revenue
-            FROM
-            gold.fact_order_items oi
-            JOIN gold.dim_products p ON oi.product_id = p.product_id
-            GROUP BY oi.product_id, p.category_name
-        )
+    df3 = mo.sql("""
+    WITH product_revenue AS (
         SELECT 
-            product_id,
-            category_name,
-            revenue,
-            DENSE_RANK() OVER(PARTITION BY category_name ORDER BY revenue DESC) AS classement
-        FROM product_revenue
-        """,
-        engine=engine
+            oi.product_id,
+            p.category_name,
+            SUM(oi.total_price) AS revenue
+        FROM
+        gold.fact_order_items oi
+        JOIN gold.dim_products p ON oi.product_id = p.product_id
+        GROUP BY oi.product_id, p.category_name
     )
+    SELECT 
+        product_id,
+        category_name,
+        revenue,
+        DENSE_RANK() OVER(PARTITION BY category_name ORDER BY revenue DESC) AS classement
+    FROM product_revenue
+    """,engine = engine)
+    df3
+
+    
+
+
     return
 
 
@@ -183,36 +185,7 @@ def _(mo):
 
 @app.cell
 def _(engine, mo):
-    _df = mo.sql(
-        f"""
-        /*WITH customer_payments AS (
-            SELECT
-                o.customer_id,
-                o.order_id,
-                o.order_purchase_timestamp,
-                op.payment_value
-            FROM silver.orders o
-            JOIN silver.payments op ON op.order_id = o.order_id
-        )
-        SELECT
-            customer_id,
-            order_id,
-            order_purchase_timestamp,
-            payment_value,
-            LAG(payment_value) OVER (
-                PARTITION BY customer_id
-                ORDER BY order_purchase_timestamp
-            ) AS prev_payment_value
-        FROM customer_payments;*/
-        """,
-        engine=engine
-    )
-    return
-
-
-@app.cell
-def _(engine, mo):
-    df = mo.sql("""
+    df4 = mo.sql("""
     WITH customer_payments AS (
         SELECT
         	o.customer_id,
@@ -239,20 +212,7 @@ def _(engine, mo):
     select * from test 
     WHERE prev_payment_value is not null;
     """,engine = engine)
-    df
-    return
-
-
-@app.cell(hide_code=True)
-def _(engine, mo):
-    _df = mo.sql(
-        f"""
-        SELECT order_id, SUM(payment_value) as total_payment_value
-          FROM silver.payments
-          GROUP BY order_id
-        """,
-        engine=engine
-    )
+    df4
     return
 
 
@@ -270,7 +230,7 @@ def _(engine, mo):
     #2-Jointure avec costumer pour récupérer le vrai id client métier
     #3-application de window function : LEAD avoir l'historique paiment commande 
     #de chaque client par odre de date d'achats
-    df2= mo.sql("""
+    df5= mo.sql("""
     WITH aggreged_payments AS (
         SELECT 
             order_id, 
@@ -306,7 +266,7 @@ def _(engine, mo):
     """,engine = engine)
 
     # remplace LAG par LEAD pour récuppérer le montant de la commande suivante dans chaque ligne
-    df2
+    df5
     return
 
 
@@ -329,7 +289,7 @@ def _(mo):
 @app.cell
 def _(engine, mo):
     #Calculer le chiffre d’affaires par jour, puis le cumul jour après jour
-    df3= mo.sql("""
+    df6= mo.sql("""
     WITH daily_revenue AS (
         SELECT
             CAST(DATE_TRUNC('day', o.order_purchase_timestamp) AS DATE) AS order_day,
@@ -344,7 +304,7 @@ def _(engine, mo):
         SUM(revenue) OVER (ORDER BY order_day) AS running_total
     FROM daily_revenue;
     """,engine = engine)
-    df3
+    df6
     return
 
 
@@ -471,15 +431,15 @@ def _(mo):
 
 @app.cell
 def _(engine, mo):
-    df_exo3 = mo.sql(
-        f"""
-        WITH cte1 AS (
-            SELECT
-                order_id,
-                customer_unique_id as customer,
-                CAST(DATE_TRUNC('day', order_purchase_timestamp) AS DATE) purchase_date
-            FROM silver.orders o
-            JOIN silver.customers c ON o.customer_id = c.customer_id
+    df_exo3 =mo.sql(
+        """
+       WITH cte1 AS (
+        SELECT
+            order_id,
+            customer_unique_id as customer,
+            CAST(DATE_TRUNC('day', order_purchase_timestamp) AS DATE) purchase_date
+        FROM silver.orders o
+        JOIN silver.customers c ON o.customer_id = c.customer_id
         ),
         cte2 AS (
             SELECT 
@@ -498,9 +458,10 @@ def _(engine, mo):
             diff_days
         FROM cte2
         ORDER BY diff_days DESC NULLS LAST
-        """,
-        engine=engine
-    )
+    
+        """, engine=engine)
+    df_exo3
+ 
     return
 
 

@@ -7,6 +7,9 @@ app = marimo.App(width="medium")
 @app.cell
 def _():
     import marimo as mo
+    import pandas as _pd
+    import matplotlib.pyplot as _plt
+    import seaborn as _sns
 
     return (mo,)
 
@@ -14,6 +17,7 @@ def _():
 @app.cell
 def _():
     from src.loaders.postgres_loader import PostgresLoader
+
 
     return (PostgresLoader,)
 
@@ -60,7 +64,44 @@ def _(engine, mo):
     ORDER BY co.nb_orders DESC
     """,engine = engine)
     df1
+    return (df1,)
 
+
+@app.cell
+def _(df1):
+    import pandas as _pd
+    import matplotlib.pyplot as _plt
+    import seaborn as _sns
+
+    _df = df1.to_pandas()
+    # Supposons que df1 est déjà chargé comme décrit
+    # Agréger par ville
+    top_villes = _df.groupby("city")["nb_orders"].sum().sort_values(ascending=False).head(20).reset_index()
+
+    _plt.figure(figsize=(12,8))
+    _sns.barplot(data=top_villes, y="city", x="nb_orders", palette="viridis")
+    _plt.xlabel("Nombre total de commandes")
+    _plt.ylabel("Ville")
+    _plt.title("Top 20 villes par nombre total de commandes")
+    _plt.tight_layout()
+    _plt.show()
+    return
+
+
+@app.cell
+def _(df1):
+    import matplotlib.pyplot as _plt
+    import seaborn as sns
+
+    _df = df1.to_pandas()
+
+    _plt.figure(figsize=(8,5))
+    sns.histplot(_df["nb_orders"], bins=30, kde=True, color="skyblue")
+    _plt.xlabel("Nombre de commandes par client")
+    _plt.ylabel("Nombre de clients")
+    _plt.title("Distribution du nombre de commandes par client")
+    _plt.tight_layout()
+    _plt.show()
     return
 
 
@@ -109,9 +150,29 @@ def _(engine, mo):
     FROM product_revenue
     """,engine = engine)
     df2
+    return (df2,)
 
-    
 
+@app.cell
+def _(df2):
+    import matplotlib.pyplot as _plt
+    import seaborn as _sns
+
+    _df2 = df2.to_pandas()  # si df2 est polars
+
+    # Calcule le revenue total par catégorie
+    total_revenue = _df2.groupby("category_name")["revenue"].sum().reset_index()
+    # Trie, garde les 20 meilleurs
+    top20 = total_revenue.sort_values("revenue", ascending=False).head(20)
+
+    _plt.figure(figsize=(12,5))
+    _sns.barplot(data=top20, x="category_name", y="revenue", palette="tab20")
+    _plt.ylabel("Chiffre d'affaires total")
+    _plt.xlabel("Catégorie")
+    _plt.title("Top 20 catégories par chiffre d'affaires total")
+    _plt.xticks(rotation=45, ha="right")
+    _plt.tight_layout()
+    _plt.show()
     return
 
 
@@ -152,10 +213,26 @@ def _(engine, mo):
     FROM product_revenue
     """,engine = engine)
     df3
+    return (df3,)
 
-    
 
+@app.cell
+def _(df3):
+    import matplotlib.pyplot as _plt
+    import seaborn as _sns
 
+    _df3 = df3.to_pandas()
+
+    top10 = _df3.sort_values("revenue", ascending=False).head(10)
+
+    _plt.figure(figsize=(14,6))
+    _sns.barplot(data=top10, x="product_id", y="revenue", hue="category_name", palette="tab10")
+    _plt.xlabel("Produit")
+    _plt.ylabel("Chiffre d'affaires")
+    _plt.title("Top 10 produits toutes catégories confondues")
+    _plt.xticks(rotation=60, ha="right")
+    _plt.tight_layout()
+    _plt.show()
     return
 
 
@@ -213,6 +290,47 @@ def _(engine, mo):
     WHERE prev_payment_value is not null;
     """,engine = engine)
     df4
+    return (df4,)
+
+
+@app.cell
+def _(df4):
+    import matplotlib.pyplot as _plt
+    import seaborn as _sns
+
+    _df4 = df4.to_pandas()
+
+    _plt.figure(figsize=(8,6))
+    _sns.scatterplot(data=_df4, x="prev_payment_value", y="payment_value", alpha=0.6)
+    _plt.xlabel("Paiement précédent")
+    _plt.ylabel("Paiement actuel")
+    _plt.title("Relation entre deux paiements successifs par client")
+    _plt.tight_layout()
+    _plt.show()
+    return
+
+
+@app.cell
+def _(df4):
+    import matplotlib.pyplot as _plt
+    import pandas as _pd
+
+    _df4 = df4.to_pandas()
+
+    # Convertir la colonne en datetime
+    _df4["order_purchase_timestamp"] = _pd.to_datetime(_df4["order_purchase_timestamp"])
+
+    # Regrouper par jour (ou par mois selon le volume)
+    payments_by_day = _df4.groupby(_df4["order_purchase_timestamp"].dt.date)["payment_value"].sum().reset_index()
+
+    _plt.figure(figsize=(12,5))
+    _plt.plot(payments_by_day["order_purchase_timestamp"], payments_by_day["payment_value"], marker='o', color="royalblue")
+    _plt.xlabel("Date")
+    _plt.ylabel("Total des paiements")
+    _plt.title("Total des paiements par jour")
+    _plt.xticks(rotation=45)
+    _plt.tight_layout()
+    _plt.show()
     return
 
 
@@ -258,15 +376,35 @@ def _(engine, mo):
         LAG(total_payment_value) OVER (
             PARTITION BY customer_unique_id
             ORDER BY order_purchase_timestamp
-        ) AS prev_payment_value
+        ) AS next_payment_value
     FROM customer_payments
     )
     select * from previous_commande 
-    WHERE prev_payment_value is not null;
+    WHERE next_payment_value is not null;
     """,engine = engine)
 
     # remplace LAG par LEAD pour récuppérer le montant de la commande suivante dans chaque ligne
     df5
+    return (df5,)
+
+
+@app.cell
+def _(df5):
+    import matplotlib.pyplot as _plt
+    import pandas as _pd
+    import seaborn as _sns
+
+    _df5 = df5.to_pandas()
+
+    _df5["delta"] = _df5["next_payment_value"] - _df5["total_payment_value"]
+
+    _plt.figure(figsize=(8,5))
+    _sns.histplot(_df5["delta"], bins=30, color="orange", kde=True)
+    _plt.xlabel("Variation du paiement entre deux commandes")
+    _plt.ylabel("Nombre de commandes")
+    _plt.title("Distribution des écarts de paiement entre commandes")
+    _plt.tight_layout()
+    _plt.show()
     return
 
 
@@ -305,6 +443,29 @@ def _(engine, mo):
     FROM daily_revenue;
     """,engine = engine)
     df6
+    return (df6,)
+
+
+@app.cell
+def _(df6):
+    import matplotlib.pyplot as _plt
+    import pandas as _pd
+
+    _df6 = df6.to_pandas()
+
+    # Si la colonne order_day n'est pas déjà datetime, convertir
+    _df6["order_day"] = _pd.to_datetime(_df6["order_day"])
+
+    _plt.figure(figsize=(14,6))
+    _plt.plot(_df6["order_day"], _df6["revenue"], label="Chiffre d'affaires journalier", color="tab:blue", marker="o")
+    _plt.plot(_df6["order_day"], _df6["running_total"], label="Chiffre d'affaires cumulé", color="tab:orange", linewidth=2)
+    _plt.xlabel("Date")
+    _plt.ylabel("Valeur (€)")
+    _plt.title("Chiffre d'affaires journalier et cumul (running total)")
+    _plt.legend()
+    _plt.xticks(rotation=45)
+    _plt.tight_layout()
+    _plt.show()
     return
 
 
@@ -322,17 +483,6 @@ def _(mo):
     <div style='color:blue; font-size: 18px'> 1-Récupérer le classement de chaque client en fonction du montant total de ses paiements (à l'aide de l'expression régulière CTE sur order_payments, puis en appelant la fonction RANK()).
     </div>
     """)
-    return
-
-
-@app.cell(hide_code=True)
-def _(engine, mo):
-    _df = mo.sql(
-        f"""
-
-        """,
-        engine=engine
-    )
     return
 
 
@@ -370,6 +520,28 @@ def _(engine, mo):
         FROM payments_per_customer
         """, engine=engine)
     df_exo1
+    return (df_exo1,)
+
+
+@app.cell
+def _(df_exo1):
+    import matplotlib.pyplot as _plt
+    import pandas as _pd
+    import seaborn as _sns
+
+    _df_exo1 = df_exo1.to_pandas()  # si df_exo1 est polars
+
+    # Prendre les 20 premiers (les top clients)
+    _top20 = _df_exo1.sort_values("total_spent", ascending=False).head(20)
+
+    _plt.figure(figsize=(12,5))
+    _sns.barplot(data=_top20, x="customer", y="total_spent", palette="viridis")
+    _plt.xlabel("Client")
+    _plt.ylabel("Total dépensé")
+    _plt.title("Top 20 clients par chiffre d'affaires")
+    _plt.xticks(rotation=70)
+    _plt.tight_layout()
+    _plt.show()
     return
 
 
@@ -415,9 +587,45 @@ def _(engine, mo):
             amount,
             AVG(amount) OVER(PARTITION BY customer)  AS average_amount
         FROM payments_per_customer
-    
+
         """, engine=engine)
     df_exo2
+    return (df_exo2,)
+
+
+@app.cell
+def _(df_exo2):
+    import matplotlib.pyplot as _plt
+    import pandas as _pd
+    import seaborn as _sns
+
+    _df_exo2 = df_exo2.to_pandas()
+
+    _plt.figure(figsize=(10,5))
+    _sns.histplot(_df_exo2["average_amount"], bins=30, color="dodgerblue", kde=True)
+    _plt.xlabel("Montant moyen par commande (par client)")
+    _plt.ylabel("Nombre de clients/commandes")
+    _plt.title("Distribution du montant moyen par commande client")
+    _plt.tight_layout()
+    _plt.show()
+    return
+
+
+@app.cell
+def _(df_exo2):
+    import matplotlib.pyplot as _plt
+    import pandas as _pd
+    import seaborn as _sns
+
+    _df_exo2 = df_exo2.to_pandas()
+
+    _plt.figure(figsize=(8,6))
+    _sns.scatterplot(data=_df_exo2, x="average_amount", y="amount", alpha=0.4)
+    _plt.xlabel("Montant moyen du client")
+    _plt.ylabel("Montant de la commande")
+    _plt.title("Montant de la commande vs ticket moyen client")
+    _plt.tight_layout()
+    _plt.show()
     return
 
 
@@ -458,10 +666,33 @@ def _(engine, mo):
             diff_days
         FROM cte2
         ORDER BY diff_days DESC NULLS LAST
-    
+
         """, engine=engine)
     df_exo3
- 
+    return (df_exo3,)
+
+
+@app.cell
+def _(df_exo3):
+    import matplotlib.pyplot as _plt
+    import pandas as _pd
+    import seaborn as _sns
+
+    _df_exo3 = df_exo3.to_pandas()
+
+    # On supprime les NULL (première commande)
+    _diff_days_no_null = _df_exo3["diff_days"].dropna()
+    # Il se peut que diff_days soit un type timedelta à convertir
+    if _diff_days_no_null.dtype == "timedelta64[ns]":
+        _diff_days_no_null = _diff_days_no_null.dt.days
+
+    _plt.figure(figsize=(10,5))
+    _sns.histplot(_diff_days_no_null, bins=30, color="orchid", kde=True)
+    _plt.xlabel("Nb jours entre deux commandes")
+    _plt.ylabel("Nombre de commandes")
+    _plt.title("Distribution du délai entre deux commandes d'un client")
+    _plt.tight_layout()
+    _plt.show()
     return
 
 
@@ -536,19 +767,19 @@ def _(engine, mo):
         DROP INDEX IF EXISTS silver.idx_orders_purchase_ts;
         CREATE INDEX idx_orders_purchase_ts
         ON silver.orders(order_purchase_timestamp);
-    
+
         DROP INDEX IF EXISTS silver.idx_orders_customer_purchase;
         CREATE INDEX idx_orders_customer_purchase
         ON silver.orders(customer_id, order_purchase_timestamp DESC);
-    
+
         DROP INDEX IF EXISTS silver.idx_orders_customer;
         CREATE INDEX idx_orders_customer
         ON silver.orders(customer_id);
-    
+
         DROP INDEX IF EXISTS silver.idx_order_items_product;
         CREATE INDEX idx_order_items_product
         ON silver.order_items(product_id);
-    
+
         DROP INDEX IF EXISTS silver.idx_products_category;
         CREATE INDEX idx_products_category
         ON silver.products(product_category_name);
@@ -603,7 +834,7 @@ def _(engine, mo):
     #EXPLAIN ANALYZE - Avec timing réel
     #1-ANALYSE AVANT INDEX
     _df = mo.sql("""
-    
+
         DROP INDEX IF EXISTS silver.idx_orders_purchase_ts;
         DROP INDEX IF EXISTS silver.idx_order_items_order;
         DROP INDEX IF EXISTS silver.idx_order_order;
@@ -625,15 +856,15 @@ def _(engine, mo):
 def _(engine, mo):
     #1-ANALYSE APRS INDEX
     _df = mo.sql("""
-    
+
         DROP INDEX IF EXISTS silver.idx_order_order;
         CREATE INDEX idx_order_order
         ON silver.orders(order_id);
-    
+
         DROP INDEX IF EXISTS silver.idx_orders_purchase_ts;
         CREATE INDEX idx_orders_purchase_ts
         ON silver.orders(order_purchase_timestamp);
-    
+
         DROP INDEX IF EXISTS silver.idx_order_items_order;
         CREATE INDEX idx_order_items_order
         ON silver.order_items(order_id);
@@ -669,7 +900,7 @@ def _(engine, mo):
     #1-ANALYSE AVANT INDEX
     _df = mo.sql("""
         DROP INDEX IF EXISTS silver.idx_order_purchase_year;
-    
+
         EXPLAIN ANALYZE
         SELECT *
         FROM silver.orders
@@ -693,7 +924,7 @@ def _(engine, mo):
         SELECT *
         FROM silver.orders
         WHERE purchase_year = 2025;
-    
+
         """,
         engine=engine)
     _df
@@ -739,11 +970,11 @@ def _(engine, mo):
         DROP INDEX IF EXISTS silver.idx_order_items_order;
         CREATE INDEX idx_order_items_order
         ON silver.orders(order_id);
-    
+
         DROP INDEX IF EXISTS silver.idx_order_items_product;
         CREATE INDEX idx_order_items_product
         ON silver.order_items(product_id);
-    
+
         EXPLAIN ANALYZE
         SELECT o.order_id, oi.product_id
         FROM silver.orders o
@@ -792,7 +1023,7 @@ def _(engine, mo):
         DROP INDEX IF EXISTS silver.idx_orders_purchase_ts;
         CREATE INDEX idx_orders_purchase_ts
         ON silver.orders(order_purchase_timestamp);
-    
+
         EXPLAIN ANALYZE
         SELECT order_id, order_purchase_timestamp
         FROM silver.orders
@@ -814,7 +1045,7 @@ def _(mo):
 @app.cell
 def _(engine, mo):
     #1--- Requête 1
-    df_execution_req1 = mo.sql("""
+    _df = mo.sql("""
 
         EXPLAIN ANALYZE
         SELECT *
@@ -822,14 +1053,14 @@ def _(engine, mo):
         WHERE order_status = 'delivered';
         """,
         engine=engine)
-    df_execution_req1
+    _df
     return
 
 
 @app.cell
 def _(engine, mo):
     #1--- Requête 2
-    df_execution_req2 = mo.sql("""
+    _df = mo.sql("""
 
         EXPLAIN ANALYZE
         SELECT order_id, customer_id
@@ -837,7 +1068,7 @@ def _(engine, mo):
         WHERE order_status = 'delivered';
         """,
         engine=engine)
-    df_execution_req2
+    _df
     return
 
 
@@ -987,14 +1218,14 @@ def _(engine, mo):
     # -- Requête après optimisation
     _df = mo.sql(
         """
-    
+
         DROP INDEX IF EXISTS silver.idx_products_category;
         CREATE INDEX idx_products_category
         ON silver.products(product_category_name);
 
         CREATE INDEX idx_order_items_product_price
         ON silver.order_items(product_id, price DESC);
-    
+
         EXPLAIN ANALYZE
         WITH target_products AS (
             SELECT product_id
@@ -1030,7 +1261,22 @@ def _(mo):
 
 
 @app.cell
-def _():
+def _(engine, mo):
+    # -- Requête après optimisation
+    _df = mo.sql(
+        """
+        SELECT TO_CHAR(TO_DATE(date_id::text, 'YYYYMMDD'), 'YYYY-MM') AS year_month,
+               SUM(order_amount) AS total_sales,
+               COUNT(DISTINCT order_id) AS num_orders,
+               ROUND(
+        (SUM(order_amount)::numeric / GREATEST(COUNT(DISTINCT order_id), 1)),2) AS avg_order_value 
+        FROM gold.fact_orders
+        GROUP BY 1
+        ORDER BY 1;
+        """,
+        engine=engine,
+    )
+    _df
     return
 
 

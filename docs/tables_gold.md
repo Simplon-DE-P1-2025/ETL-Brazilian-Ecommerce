@@ -227,16 +227,40 @@ Performance de chaque produit. Une ligne = un produit.
 
 ---
 
-### fact_category_performance
+### fact_payments
 
-Performance de chaque catégorie. Une ligne = une catégorie.
+Table de faits des paiements (1 ligne = 1 paiement).
 
 | Colonne | Description |
 |---------|-------------|
-| category_id | Identifiant de la catégorie |
-| category_name | Nom de la catégorie en anglais |
-| general_category | Groupe général |
-| total_products | Nombre de produits dans la catégorie |
-| total_revenue | Revenu total de la catégorie |
-| revenue_share_pct | Part du revenu total (en pourcentage) |
-| revenue_rank | Classement par revenu (1 = meilleure catégorie) |
+| order_id | Identifiant de la commande |
+| payment_type | Type de paiement (credit_card, boleto, voucher, debit_card, not_defined) |
+| payment_type_desc | Description business du type de paiement |
+| has_installments | Paiement en plusieurs fois (booléen) |
+| payment_installments | Nombre de versements |
+| installments_mode | Mode de versement (single, multiple, variable) |
+| payment_sequential | Numéro du paiement dans la commande |
+| payment_value | Montant payé |
+
+---
+
+### fact_reviews
+
+Table de faits des avis clients (reviews) enrichie : note, longueur, délai de réponse, type de jour, saison...
+
+| Colonne | Description |
+|---------|-------------|
+| review_id | Identifiant de l'avis |
+| order_id | Identifiant de la commande |
+| review_score | Note (1 à 5) |
+| review_creation_date | Date de création de l'avis |
+| review_answer_timestamp | Date de réponse à l'avis |
+| date_id | Date de la commande (pour analyses temporelles) |
+| review_comment_length | Longueur du commentaire |
+| response_delay_days | Délai de réponse en jours |
+| review_weekday | Numéro du jour de la semaine |
+| review_weekday_name | Nom du jour |
+| review_day_type | Type de jour (weekend, semaine) |
+| review_season | Saison (été, hiver, etc.) |
+
+---

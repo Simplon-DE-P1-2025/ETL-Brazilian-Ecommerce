@@ -1,4 +1,3 @@
-
 <p align="center">
 	<img src="docs/simplon_logo.png" alt="Simplon Logo" width="180"/>
 </p>
@@ -116,3 +115,57 @@ Python 3.12 · Pandas · PostgreSQL · SQLAlchemy · Loguru
 ---
 
 Dataset : [Olist Brazilian E-Commerce (Kaggle)](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce)
+
+## Fichier SQL des KPI
+
+Les requêtes principales pour les indicateurs business sont dans `sql/kpi_queries.sql` :
+
+- Chiffre d'affaires (CA) par jour/mois/année
+- Top produits par revenu
+- Nouveaux vs récurrents clients
+- Panier moyen
+- Segmentation RFM
+- Performance géographique
+- Taux d'annulation, retards, reviews
+
+Voir le fichier pour la syntaxe détaillée.
+
+---
+
+## Application Streamlit
+
+L'app Streamlit (`app/app.py`) propose un dashboard interactif avec plusieurs pages :
+
+- Accueil : synthèse CA, top produits, distribution RFM
+- Ventes : évolution CA, top produits, panier moyen, taux de conversion
+- Clients : nouveaux/récurrents, segmentation RFM
+- RFM : analyse des segments clients
+- Produits : top produits, performance
+- Géographie : analyse par état/région, metrics, carte
+- Cohortes : lifetime value par cohorte
+- Livraison : délais, anomalies, recommandations logistiques
+- Anomalies : détection et recommandations qualité data
+
+Navigation via la sidebar (`app/ui/sidebar.py`).
+
+Chaque page utilise des requêtes SQL sur les tables Gold, des graphiques interactifs, et des tableaux exportables.
+
+---
+
+## Notebook Marimo pour SQL avancé
+
+Le projet inclut un notebook Marimo (`notebook_marimo.py`) pour l'exploration et l'analyse SQL avancée sur les tables Silver.
+
+- Marimo permet d'exécuter des requêtes SQL directement sur la base PostgreSQL, d'afficher les résultats sous forme de DataFrame, de visualiser des graphiques interactifs, et de documenter les analyses.
+- Utilisez-le pour tester des requêtes complexes, explorer les KPIs, et prototyper des analyses business sans modifier le pipeline principal.
+- Les cellules du notebook sont organisées par thème : ventes, clients, produits, cohortes, géographie, livraison, anomalies.
+- Les requêtes SQL peuvent être copiées depuis `sql/kpi_queries.sql` ou adaptées selon vos besoins.
+- Marimo facilite le partage et la reproductibilité des analyses SQL avancées.
+
+Pour lancer le notebook :
+
+```bash
+marimo run notebook_marimo.py
+```
+
+> Voir le fichier pour des exemples de requêtes et de visualisations.

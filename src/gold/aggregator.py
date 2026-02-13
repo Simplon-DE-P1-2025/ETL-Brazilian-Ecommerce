@@ -1,3 +1,4 @@
+
 import pandas as pd
 import numpy as np
 from typing import Dict
@@ -55,8 +56,10 @@ class GoldAggregator:
         self._create_fact_payments()
         self._create_fact_daily_sales()
         self._create_fact_customer_lifetime()
+        self._create_fact_customer_rfm()
         self._create_fact_product_performance()
         self._create_fact_category_performance()
+        self._create_fact_reviews()
         
         return self.gold
 
@@ -424,8 +427,45 @@ class GoldAggregator:
 
         self.gold['fact_payments'] = fact_payments
         logger.info(f"fact_payments créée: {len(fact_payments)} lignes")
+   
         
+    def _create_fact_reviews(self):
+        """
+        Table de faits des avis clients (reviews) enrichie : 
+        - note, longueur, délai de réponse, type de jour, saison...
+        - jointure avec orders pour date_id
+        """
+        required_tables = ['reviews', 'orders']
+        for table in required_tables:
+            if table not in self.silver:
+                logger.warning(f"Table '{table}' manquante - fact_order_reviews non créée")
+                return
 
+        reviews = self.silver['reviews'].copy()
+        orders = self.silver['orders'][['order_id', 'order_purchase_timestamp']]
+
+        # Jointure orders pour date_id
+        reviews = reviews.merge(orders, on='order_id', how='left')
+        reviews = reviews[reviews['order_purchase_timestamp'].notna()].copy()
+        reviews['date_id'] = pd.to_datetime(reviews['order_purchase_timestamp']).dt.strftime('%Y%m%d').astype(int)
+
+        # Colonnes finales utiles (adapte selon tes dashboards/analyses)
+        cols = [
+            'review_id', 'order_id', 'review_score',
+            'review_creation_date', 'review_answer_timestamp', 'date_id',
+            'review_comment_length',        # longueur texte
+            'response_delay_days',          # délai de réponse en jours
+            'review_weekday', 'review_weekday_name',
+            'review_day_type',
+            'review_season'
+        ]
+        # Garder celles qui existent dans reviews
+        cols = [c for c in cols if c in reviews.columns]
+        fact_order_reviews = reviews[cols].copy()
+
+        self.gold['fact_order_reviews'] = fact_order_reviews
+        logger.info(f"fact_order_reviews créée: {len(fact_order_reviews)} lignes")
+    
     def _create_fact_daily_sales(self):
         """
         Table de faits agrégée par jour.
@@ -562,7 +602,77 @@ class GoldAggregator:
             default='Needs Attention'
         )
         return pd.Series(segments, index=df.index)
+    
+    
+    def _create_fact_customer_rfm(self):
+        """
+        Crée la fact table customer RFM avec scores, segment, label marketing.
+        """
 
+        if 'orders' not in self.silver or 'customers' not in self.silver:
+            logger.warning("orders ou customers absents - fact_customer_rfm non créée")
+            return
+
+        # Merge orders + customers pour amener customer_unique_id dans orders
+        orders = self.silver['orders'].copy()
+        customers = self.silver['customers'][['customer_id', 'customer_unique_id']].copy()
+        orders = orders.merge(customers, on='customer_id', how='left')
+
+        # SÉCURITÉ supplémentaire
+        if 'customer_unique_id' not in orders.columns:
+            logger.warning("'customer_unique_id' absent de orders après merge - abandon")
+            return
+
+        today = orders['order_purchase_timestamp'].max()
+
+        # Calcul des montants de commande (on suppose colonne 'order_value' sinon adapte)
+        if 'order_value' not in orders.columns:
+            # Tente de le calculer depuis items
+            if 'order_items' in self.silver:
+                order_amounts = self.silver['order_items'].groupby('order_id')['total_price'].sum().reset_index()
+                orders = orders.merge(order_amounts, on='order_id', how='left')
+                orders = orders.rename(columns={'total_price': 'order_value'})
+            else:
+                orders['order_value'] = 0
+
+        # Agrégation RFM (par customer_unique_id)
+        agg = orders.groupby('customer_unique_id').agg(
+            recency_days=('order_purchase_timestamp', lambda x: (today - x.max()).days),
+            frequency=('order_id', 'nunique'),
+            monetary=('order_value', 'sum')
+        ).reset_index()
+
+        # Scores (quintiles, sur 5)
+        agg['recency_score'] = pd.qcut(agg['recency_days'], 5, labels=[5,4,3,2,1]).astype(int)
+        agg['frequency_score'] = pd.qcut(agg['frequency'].rank(method='first'), 5, labels=[1,2,3,4,5]).astype(int)
+        agg['monetary_score'] = pd.qcut(agg['monetary'].rank(method='first'), 5, labels=[1,2,3,4,5]).astype(int)
+
+        # Segment
+        agg['rfm_segment'] = (
+            agg['recency_score'].astype(str) +
+            agg['frequency_score'].astype(str) +
+            agg['monetary_score'].astype(str)
+        )
+
+        # Label marketing simple
+        def label_rfm(row):
+            if row['recency_score'] == 5 and row['frequency_score'] >= 4:
+                return 'Champions'
+            elif row['frequency_score'] >= 4:
+                return 'Loyal'
+            elif row['recency_score'] <= 2:
+                return 'At Risk'
+            elif row['frequency_score'] == 1:
+                return 'One-Time'
+            else:
+                return 'Others'
+        agg['rfm_label'] = agg.apply(label_rfm, axis=1)
+        agg['rfm_as_of_date'] = today
+
+        self.gold['fact_customer_rfm'] = agg
+        logger.info(f"fact_customer_rfm créée: {len(agg)} lignes")
+        
+        
     def _calculate_rfm_segment(self, row) -> str:
         """
         Segmentation RFM simplifiée basée sur recency et frequency.
